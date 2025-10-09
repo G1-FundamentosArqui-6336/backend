@@ -16,4 +16,5 @@ public interface FleetCommandService {
     Optional<RouteAssignment> handle(AssignRouteToFleetCommand c);
     Optional<Fleet> handle(StartRouteAssignmentCommand c);
     Optional<Fleet> handle(CompleteRouteAssignmentCommand c);
+    boolean handle(CheckFleetByIdAndCapacityCommand command);
 }

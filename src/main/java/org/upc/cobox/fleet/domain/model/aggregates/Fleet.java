@@ -1,6 +1,7 @@
 package org.upc.cobox.fleet.domain.model.aggregates;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
@@ -9,6 +10,8 @@ import org.upc.cobox.fleet.domain.model.entities.RouteAssignment;
 import org.upc.cobox.fleet.domain.model.valueobjects.Estado;
 import org.upc.cobox.fleet.domain.model.valueobjects.Placa;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -33,8 +36,9 @@ public class Fleet {
     @NotBlank @Column(nullable = false)
     private String modelo;
 
-    @Min(1) @Column(nullable = false)
-    private Integer capacidadKg;
+    @DecimalMin(value = "0.001", inclusive = true) // Permite fracciones de kg
+    @Column(nullable = false, precision = 10, scale = 3) // Define la precisión
+    private BigDecimal capacidadKg;
 
     @Enumerated(EnumType.STRING) @Column(nullable = false)
     private Estado estado = Estado.DISPONIBLE;
@@ -42,7 +46,7 @@ public class Fleet {
     @OneToMany(mappedBy = "fleet", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<RouteAssignment> assignments = new HashSet<>();
 
-    public Fleet(Placa placa, String marca, String modelo, Integer capacidadKg) {
+    public Fleet(Placa placa, String marca, String modelo, BigDecimal capacidadKg) {
         this.placa = placa;
         this.marca = marca;
         this.modelo = modelo;
@@ -51,7 +55,7 @@ public class Fleet {
     }
 
     // Reglas del dominio
-    public void actualizarDatos(String marca, String modelo, Integer capacidadKg) {
+    public void actualizarDatos(String marca, String modelo, BigDecimal capacidadKg) {
         this.marca = marca;
         this.modelo = modelo;
         this.capacidadKg = capacidadKg;
@@ -59,7 +63,7 @@ public class Fleet {
 
     public void cambiarEstado(Estado nuevo) { this.estado = nuevo; }
 
-    public RouteAssignment assignRoute(Long routeId, java.time.LocalDateTime plannedStart) {
+    public RouteAssignment assignRoute(Long routeId, LocalDateTime plannedStart) {
         if (this.estado == Estado.AVERIADO)
             throw new IllegalStateException("No se puede asignar ruta: unidad averiada");
         var a = new RouteAssignment(routeId, plannedStart, this);
@@ -67,6 +71,9 @@ public class Fleet {
         this.estado = Estado.OCUPADO;
         return a;
     }
+
+
+
 
     public void markRouteStarted(Long assignmentId) {
         var a = assignments.stream()
