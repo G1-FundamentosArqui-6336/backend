@@ -52,9 +52,8 @@ public class Order extends AuditableAbstractAggregateRoot<Order> {
     private Evidence evidence;
 
 
-    @Embedded
-    @AttributeOverride(name = "value", column = @Column(name = "fleet_id"))
-    private FleetId fleetId;
+//    @Embedded
+//    private RouteId routeId;
 
     protected Order() { /* for JPA */ }
 
@@ -105,19 +104,11 @@ public class Order extends AuditableAbstractAggregateRoot<Order> {
         return true;
     }
 
-    /** Asignar vehículo al pedido por identidad (AR externo). */
-    public boolean assignVehicle(FleetId fleetId) {
-        if (this.status == DeliveryStatus.CANCELLED || this.status == DeliveryStatus.DELIVERED) return false;
-        if (this.fleetId != null && this.fleetId.equals(fleetId)) return true; // ya asignado
-        this.fleetId = fleetId;
-        return true;
-    }
+//    public void assignToRoute(RouteId routeId) {
+//        this.routeId = routeId;
+//        this.status = DeliveryStatus.ASSIGNED;
+//    }
 
-    public boolean unassignVehicle() {
-        if (this.status == DeliveryStatus.DELIVERED) return false;
-        this.fleetId = null;
-        return true;
-    }
 
 
 

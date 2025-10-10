@@ -12,5 +12,5 @@ public interface OrderCommandService {
     Optional<Order> handle(CreateOrderCommand command);
     Optional<Order> handle(UpdateOrderStatusCommand command);
     Optional<Order> handle(ValidateDeliveryCommand command);
-    Optional<Order> handle(AssignVehicleToOrderCommand command);
+//    Optional<Order> handle(AssignVehicleToOrderCommand command);
 }

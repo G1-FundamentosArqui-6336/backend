@@ -59,25 +59,25 @@ public class OrderCommandServiceImpl implements OrderCommandService {
                 });
     }
 
-    @Override
-    public Optional<Order> handle(AssignVehicleToOrderCommand command) {
-        var orderOpt = orderRepository.findById(command.orderId());
-        if (orderOpt.isEmpty()) return Optional.empty();
-
-
-        boolean fleetExists = externalFleetService.existsFleetByIdAndCapacity(command.fleetId(),orderOpt.get().getTotalWeight().getWeightKg());
-
-        if (!fleetExists) {
-            throw new FleetNotFoundException(command.fleetId());
-        }
-
-        Order order = orderOpt.get();
-        // 1) Asociar la identidad del vehículo al pedido
-        boolean ok = order.assignVehicle(new FleetId(command.fleetId()));
-        if (!ok) return Optional.empty();
-
-        orderRepository.save(order);
-
-        return Optional.of(order);
-    }
+//    @Override
+//    public Optional<Order> handle(AssignVehicleToOrderCommand command) {
+//        var orderOpt = orderRepository.findById(command.orderId());
+//        if (orderOpt.isEmpty()) return Optional.empty();
+//
+//
+//        boolean fleetExists = externalFleetService.existsFleetByIdAndCapacity(command.fleetId(),orderOpt.get().getTotalWeight().getWeightKg());
+//
+//        if (!fleetExists) {
+//            throw new FleetNotFoundException(command.fleetId());
+//        }
+//
+//        Order order = orderOpt.get();
+//        // 1) Asociar la identidad del vehículo al pedido
+//        boolean ok = order.assignVehicle(new FleetId(command.fleetId()));
+//        if (!ok) return Optional.empty();
+//
+//        orderRepository.save(order);
+//
+//        return Optional.of(order);
+//    }
 }
