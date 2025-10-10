@@ -34,6 +34,7 @@ public class Role extends AuditableModel {
         return new Role(Roles.ROLE_DRIVER);
     }
 
+
     public static Role toRoleFromName(String name) {
         return new Role(Roles.valueOf(name));
     }
