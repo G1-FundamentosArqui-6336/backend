@@ -12,4 +12,5 @@ import java.util.Optional;
 public interface FleetRepository extends JpaRepository<Fleet, Long> {
     Optional<Fleet> findByPlaca_Value(String placa);
     List<Fleet> findByEstado(Estado estado);
+    Optional<Fleet> findById(Long fleetId);
 }

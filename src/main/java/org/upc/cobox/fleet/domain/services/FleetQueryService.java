@@ -11,6 +11,5 @@ public interface FleetQueryService {
     Optional<Fleet> handle(GetFleetByIdQuery q);
     List<Fleet> handle(GetAllFleetsQuery q);
     List<Fleet> handle(GetFleetsByEstadoQuery q);
-
     List<RouteAssignment> handle(GetAssignmentsByFleetQuery q);
 }

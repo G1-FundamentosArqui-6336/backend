@@ -5,10 +5,12 @@ import org.springframework.stereotype.Service;
 import org.upc.cobox.fleet.domain.model.aggregates.Fleet;
 import org.upc.cobox.fleet.domain.model.commands.*;
 import org.upc.cobox.fleet.domain.model.entities.RouteAssignment;
+import org.upc.cobox.fleet.domain.model.valueobjects.Estado;
 import org.upc.cobox.fleet.domain.services.FleetCommandService;
 import org.upc.cobox.fleet.infrastructure.persistence.jpa.repositories.FleetRepository;
 import org.upc.cobox.fleet.infrastructure.persistence.jpa.repositories.RouteAssignmentRepository;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 
 @Service
@@ -52,6 +54,27 @@ public class FleetCommandServiceImpl implements FleetCommandService {
             return assignmentRepo.save(a);
         });
     }
+    @Override
+    public boolean handle(CheckFleetByIdAndCapacityCommand command) {
+        var exists=this.fleetRepo.existsById(command.fleetId());
+        if(!exists) return false;
+        var fleet=this.fleetRepo.findById(command.fleetId()).get();
+
+        if (fleet.getEstado() == Estado.AVERIADO)
+            throw new IllegalStateException("No se puede asignar: unidad averiada");
+        if (fleet.getEstado() != Estado.DISPONIBLE)
+            throw new IllegalStateException("No se puede asignar: unidad no disponible");
+        BigDecimal fleetCapacity = fleet.getCapacidadKg();
+        BigDecimal requiredKgValue = Optional.ofNullable(command.requiredKg())
+                .orElse(BigDecimal.ZERO);
+
+        if (fleetCapacity.compareTo(requiredKgValue) < 0) {
+            throw new IllegalStateException("Capacidad insuficiente (" + requiredKgValue + "kg)");
+        }
+
+        return this.fleetRepo.existsById(command.fleetId());
+    }
+
 
     @Override
     public Optional<Fleet> handle(StartRouteAssignmentCommand c) {
