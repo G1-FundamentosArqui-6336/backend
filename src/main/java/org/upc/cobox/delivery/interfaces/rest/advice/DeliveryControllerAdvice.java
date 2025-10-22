@@ -5,7 +5,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
-import org.upc.cobox.delivery.domain.exceptions.EvidenceNotFoundException;
 import org.upc.cobox.delivery.domain.exceptions.InvalidOrderStatusTransitionException;
 import org.upc.cobox.fleet.domain.exceptions.*;
 import org.upc.cobox.shared.interfaces.rest.resources.ErrorResponseResource;
@@ -17,7 +16,6 @@ public class DeliveryControllerAdvice {
 
     // Manejadores para entidades no encontradas (404 Not Found)
     @ExceptionHandler({
-            EvidenceNotFoundException.class,
             OrderNotFoundException.class
     })
     public ResponseEntity<ErrorResponseResource> handleNotFoundException(RuntimeException ex, WebRequest request) {

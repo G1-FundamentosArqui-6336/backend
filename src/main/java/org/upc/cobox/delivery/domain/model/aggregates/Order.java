@@ -30,9 +30,8 @@ public class Order extends AuditableAbstractAggregateRoot<Order> {
     @Getter
     private WeightKg weightKg;
 
+    @Embedded
     @Getter
-    @OneToOne
-    @JoinColumn(name = "evidence_id")
     private Evidence evidence;
 
     protected Order() {}
@@ -61,12 +60,12 @@ public class Order extends AuditableAbstractAggregateRoot<Order> {
         this.orderStatus = OrderStatus.IN_TRANSIT;
     }
 
-    public void markAsCompletedDelivery(Evidence evidence, Long routeId) {
+    public void markAsCompletedDelivery(String photoUrl, String receiverName, String signatureData, Long routeId) {
         if (this.orderStatus != OrderStatus.IN_TRANSIT) {
             throw new InvalidOrderStatusTransitionException(OrderStatus.IN_TRANSIT,this.orderStatus);
         }
         this.orderStatus = OrderStatus.DELIVERED;
-        this.evidence=evidence;
+        this.evidence = new Evidence(photoUrl, receiverName, signatureData);
         this.registerEvent(new OrderCompletedEvent(this,this.getId(), routeId));
 
     }

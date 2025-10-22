@@ -9,8 +9,10 @@ public class MarkAsCompletedOrderCommandFromResourceAssembler {
     public static MarkAsCompletedOrderCommand toCommandFromResource(Long orderId, MarkAsCompletedOrderResource resource) {
         return new MarkAsCompletedOrderCommand(
                 orderId,
-                resource.evidenceId(),
-                resource.routeId()
+                resource.routeId(),
+                resource.photoUrl(),
+                resource.receiverName(),
+                resource.signatureData()
         );
     }
 }
