@@ -4,6 +4,8 @@ package org.upc.cobox.fleet.domain.model.aggregates;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import org.upc.cobox.fleet.domain.exceptions.DriverNotInRouteException;
+import org.upc.cobox.fleet.domain.model.commands.CreateDriverCommand;
 import org.upc.cobox.fleet.domain.model.valueobjects.DriverStatus;
 import org.upc.cobox.shared.domain.model.aggregates.AuditableAbstractAggregateRoot;
 
@@ -11,28 +13,55 @@ import org.upc.cobox.shared.domain.model.aggregates.AuditableAbstractAggregateRo
 @Getter
 public class Driver extends AuditableAbstractAggregateRoot<Driver> {
 
+    private DriverStatus driverStatus;
+    private String licenceNumber;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 16)
-    private DriverStatus status;
+    public Driver() {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "vehicle_id", nullable = false)
-    private Vehicle vehicle;
-
-    protected Driver() {
-        this.status = DriverStatus.AVAILABLE;
+    }
+    public Driver(CreateDriverCommand command) {
+        this.licenceNumber = command.licenceNumber();
+        this.driverStatus = DriverStatus.AVAILABLE;
     }
 
-
-
-    public boolean isAvailable() { return status == DriverStatus.AVAILABLE; }
-
-    public void markBusy() {
-        if (status == DriverStatus.UNAVAILABLE) throw new IllegalStateException("Driver unavailable");
-        this.status = DriverStatus.BUSY;
+    /**
+     * Assigns the driver to a route.
+     */
+    public void markAsInRoute() {
+        if (this.driverStatus != DriverStatus.AVAILABLE) {
+            throw new IllegalStateException("Driver is not available for a new route.");
+        }
+        this.driverStatus = DriverStatus.ON_ROUTE;
     }
 
-    public void markAvailable() { this.status = DriverStatus.AVAILABLE; }
+    /**
+     * Frees the driver after completing a route.
+     */
+    public void returnFromRoute() {
+        if (this.driverStatus != DriverStatus.ON_ROUTE) {
+            throw new DriverNotInRouteException(this.driverStatus);
+        }
+        this.driverStatus = DriverStatus.AVAILABLE;
+    }
+
+    /**
+     * Sets the driver's driverStatus to a short break.
+     */
+    public void takeBreak() {
+        if (this.driverStatus == DriverStatus.ON_ROUTE) {
+            this.driverStatus = DriverStatus.ON_BREAK;
+        }
+    }
+
+    public boolean hasAvailable() {
+        return this.driverStatus == DriverStatus.AVAILABLE;
+    }
+
+    /**
+     * Marks the driver as unavailable for duty.
+     */
+    public void makeUnavailable() {
+        this.driverStatus = DriverStatus.UNAVAILABLE;
+    }
 
 }

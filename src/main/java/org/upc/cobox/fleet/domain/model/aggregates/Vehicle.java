@@ -2,6 +2,11 @@ package org.upc.cobox.fleet.domain.model.aggregates;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import org.upc.cobox.fleet.domain.exceptions.InvalidVehicleStateTransitionException;
+import org.upc.cobox.fleet.domain.exceptions.VehicleNotInRouteException;
+import org.upc.cobox.fleet.domain.exceptions.VehicleNotOperationalException;
+import org.upc.cobox.fleet.domain.model.commands.CreateVehicleCommand;
+import org.upc.cobox.fleet.domain.model.valueobjects.VehicleStatus;
 import org.upc.cobox.shared.domain.model.aggregates.AuditableAbstractAggregateRoot;
 
 @Entity
@@ -10,16 +15,55 @@ public class Vehicle extends AuditableAbstractAggregateRoot<Vehicle>{
 
 
     private String plateNumber;
-    private double capacityKg;
+    private Double capacityKg;
+    private VehicleStatus vehicleStatus;
 
-    @Enumerated(EnumType.STRING)
-    private VehicleStatus status;
+    public Vehicle() {
+    }
+    public Vehicle(CreateVehicleCommand command) {
+        this.plateNumber = command.plateNumber();
+        this.capacityKg = command.capacityKg();
+        this.vehicleStatus = VehicleStatus.OPERATIONAL;
+    }
 
 
-    public boolean isAvailable() { return status == VehicleStatus.AVAILABLE; }
+    public void markAsInRoute() {
+        if (this.vehicleStatus != VehicleStatus.OPERATIONAL) {
+            throw new VehicleNotOperationalException(this.vehicleStatus);
+        }
+        this.vehicleStatus = VehicleStatus.ON_ROUTE;
+    }
 
-    public void markInUse() { this.status = VehicleStatus.IN_USE; }
-    public void markAvailable() { this.status = VehicleStatus.AVAILABLE; }
 
-    public enum VehicleStatus { AVAILABLE, IN_USE, MAINTENANCE }
+    public boolean hasCapacityFor(double totalWeightKg) {
+        return totalWeightKg <= capacityKg;
+    }
+
+
+    /**
+     * Frees the vehicle upon route completion.
+     */
+    public void returnFromRoute() {
+        if (this.vehicleStatus != VehicleStatus.ON_ROUTE) throw new VehicleNotInRouteException(this.vehicleStatus);
+        this.vehicleStatus = VehicleStatus.OPERATIONAL;
+    }
+
+    /**
+     * Marks the vehicle as unavailable for routes due to maintenance.
+     */
+    public void sendToMaintenance() {
+        this.vehicleStatus = VehicleStatus.IN_MAINTENANCE;
+    }
+
+    /**
+     * Puts the vehicle back into service after maintenance.
+     */
+    public void markAsOperational() {
+        if (this.vehicleStatus == VehicleStatus.IN_MAINTENANCE || this.vehicleStatus == VehicleStatus.OUT_OF_SERVICE) {
+            this.vehicleStatus = VehicleStatus.OPERATIONAL;
+        } else {
+            throw new InvalidVehicleStateTransitionException(this.vehicleStatus);
+        }
+    }
+
 }

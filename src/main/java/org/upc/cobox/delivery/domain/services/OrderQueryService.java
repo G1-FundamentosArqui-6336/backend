@@ -7,9 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface OrderQueryService {
-    Optional<Order> handle(GetOrderByIdAndClientId query);
-    List<Order> handle(GetOrdersByClientId query);
-    List<Order> handle(GetOrdersByClientIdAndStatus query);
-    List<Order> handle(GetOrdersByStatus query);
-    List<Order> handle(GetAllOrders query);
+    List<Order> handle(GetOrdersByClientIdQuery query);
+    List<Order> handle(GetAllOrdersQuery query);
+    Optional<Order> handle(GetOrderByIdQuery query);
 }

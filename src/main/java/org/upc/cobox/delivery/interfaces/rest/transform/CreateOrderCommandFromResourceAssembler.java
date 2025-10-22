@@ -9,20 +9,21 @@ import java.util.Date;
 
 public class CreateOrderCommandFromResourceAssembler {
 
-    public static CreateOrderCommand toCommandFromResource(Long clientId, CreateOrderResource r) {
+    public static CreateOrderCommand toCommandFromResource(CreateOrderResource resource) {
         return new CreateOrderCommand(
-                clientId,
-                r.addressLine(),
-                r.city(),
-                r.country(),
-                r.postalCode(),
-                r.reference(),
-                safeDate(r.scheduledAt()),
-                r.notes(),
-                safeWeight(r.totalWeight())
+                resource.clientId(),
+                resource.addressLine(),
+                resource.city(),
+                resource.country(),
+                resource.postalCode(),
+                resource.referenceLatitude(),
+                resource.referenceLongitude(),
+                resource.notes(),
+                resource.weightKg()
         );
     }
 
-    private static Date safeDate(Date d) { return d == null ? new Date() : d; }
-    private static BigDecimal safeWeight(BigDecimal w) { return w == null ? BigDecimal.ZERO : w; }
+
 }
+
+

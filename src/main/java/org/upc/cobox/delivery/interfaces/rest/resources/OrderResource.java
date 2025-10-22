@@ -10,18 +10,10 @@ public record OrderResource(
         String city,
         String country,
         String postalCode,
-        String reference,
-        Date scheduledAt,
-        Date deliveredAt,
-        String status,
+        Double referenceLatitude,
+        Double referenceLongitude,
         String notes,
-        BigDecimal totalWeight,
-        EvidenceResource evidence
+        Double weightKg,
+        String orderStatus
 ){
-    public record EvidenceResource(
-            String receiverName,
-            String photoUrl,
-            String signatureCode,
-            Date takenAt
-    ) {}
 }

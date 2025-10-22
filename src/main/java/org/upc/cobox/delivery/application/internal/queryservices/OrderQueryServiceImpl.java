@@ -3,7 +3,8 @@ package org.upc.cobox.delivery.application.internal.queryservices;
 import org.springframework.stereotype.Service;
 import org.upc.cobox.delivery.domain.model.aggregates.Order;
 import org.upc.cobox.delivery.domain.model.queries.*;
-import org.upc.cobox.delivery.domain.model.valueobjects.DeliveryStatus;
+import org.upc.cobox.delivery.domain.model.valueobjects.ClientId;
+import org.upc.cobox.delivery.domain.model.valueobjects.OrderStatus;
 import org.upc.cobox.delivery.domain.services.OrderQueryService;
 import org.upc.cobox.delivery.infraestructure.persistence.jpa.repositories.OrderRepository;
 
@@ -20,38 +21,22 @@ public class OrderQueryServiceImpl implements OrderQueryService {
         this.orderRepository = orderRepository;
     }
 
-    @Override
-    public Optional<Order> handle( GetOrderByIdAndClientId query) {
-        return orderRepository.findByIdAndClientId(query.orderId(),query.clientId());
-    }
-    @Override
-    public List<Order> handle(GetOrdersByClientIdAndStatus query) {
-        if (query.status() == null || query.status().isBlank()) {
-            return orderRepository.findByClientId(query.clientId());
-        }
-        DeliveryStatus st = DeliveryStatus.valueOf(query.status().trim().toUpperCase(Locale.ROOT));
-        return orderRepository.findByClientIdAndStatus(query.clientId(), st);
-    }
 
     @Override
-    public List<Order> handle(GetOrdersByClientId query) {
-        return orderRepository.findByClientId(query.clientId());
+    public List<Order> handle(GetOrdersByClientIdQuery query) {
+        var clientId = new ClientId(query.clientId());
+        return orderRepository.findByClientId(clientId);
     }
 
-    @Override
-    public List<Order> handle(GetOrdersByStatus query) {
-        DeliveryStatus st = DeliveryStatus.valueOf(query.status().trim().toUpperCase(Locale.ROOT));
-        return orderRepository.findByStatus(st);
-    }
 
     @Override
-    public List<Order> handle(GetAllOrders query) {
+    public List<Order> handle(GetAllOrdersQuery query) {
         return orderRepository.findAll();
     }
-
-
-
-
+    @Override
+    public Optional<Order> handle(GetOrderByIdQuery query) {
+        return orderRepository.findById(query.orderId());
+    }
 
 
 }

@@ -2,82 +2,61 @@ package org.upc.cobox.delivery.application.internal.commandservices;
 
 
 import org.springframework.stereotype.Service;
-import org.upc.cobox.Incident.domain.model.aggregates.Evidence;
-import org.upc.cobox.delivery.application.internal.outboundservices.ExternalFleetService;
+import org.upc.cobox.delivery.domain.exceptions.EvidenceNotFoundException;
 import org.upc.cobox.delivery.domain.model.aggregates.Order;
-import org.upc.cobox.delivery.domain.model.commands.AssignVehicleToOrderCommand;
 import org.upc.cobox.delivery.domain.model.commands.CreateOrderCommand;
-import org.upc.cobox.delivery.domain.model.commands.UpdateOrderStatusCommand;
-import org.upc.cobox.delivery.domain.model.commands.ValidateDeliveryCommand;
-import org.upc.cobox.delivery.domain.model.valueobjects.FleetId;
+import org.upc.cobox.delivery.domain.model.commands.MarkAsCompletedOrderCommand;
+import org.upc.cobox.delivery.domain.model.commands.MarkAsInTransitOrderCommand;
+import org.upc.cobox.delivery.domain.model.commands.MarkAsReadyForDispatchOrderCommand;
 import org.upc.cobox.delivery.domain.services.OrderCommandService;
+import org.upc.cobox.delivery.infraestructure.persistence.jpa.repositories.EvidenceRepository;
 import org.upc.cobox.delivery.infraestructure.persistence.jpa.repositories.OrderRepository;
-import org.upc.cobox.fleet.domain.exceptions.FleetNotFoundException;
-
-import java.util.Optional;
+import org.upc.cobox.fleet.domain.exceptions.OrderNotFoundException;
 
 @Service
 public class OrderCommandServiceImpl implements OrderCommandService {
 
     private final OrderRepository orderRepository;
-    private final ExternalFleetService externalFleetService;
-    public OrderCommandServiceImpl(OrderRepository orderRepository,ExternalFleetService externalFleetService) {
+    private final EvidenceRepository evidenceRepository;
+    public OrderCommandServiceImpl(OrderRepository orderRepository,EvidenceRepository evidenceRepository) {
         this.orderRepository = orderRepository;
-        this.externalFleetService = externalFleetService;
+        this.evidenceRepository = evidenceRepository;
     }
 
     @Override
-    public Optional<Order> handle(CreateOrderCommand command) {
-        Order order = new Order(command);
-        Order saved = orderRepository.save(order);
-        return Optional.of(saved);
+    public Long handle(CreateOrderCommand command) {
+        var order = new Order(command);
+        orderRepository.save(order);
+        return order.getId();
     }
 
     @Override
-    public Optional<Order> handle(UpdateOrderStatusCommand command) {
-        return orderRepository.findByIdAndClientId(command.orderId(),command.clientId())
-                .flatMap(existing -> {
-                    boolean ok = existing.updateStatus(command);
-                    if (!ok) return Optional.empty();
-                    return Optional.of(orderRepository.save(existing));
-                });
+    public void handle(MarkAsInTransitOrderCommand command) {
+        orderRepository.findById(command.orderId()).map(order -> {
+            order.markAsInTransit();
+            orderRepository.save(order);
+            return order.getId();
+        }).orElseThrow(() -> new OrderNotFoundException(command.orderId()));
     }
 
     @Override
-    public Optional<Order> handle(ValidateDeliveryCommand command) {
-        return orderRepository.findById(command.orderId())
-                .flatMap(existing -> {
-                    Evidence evidence = new Evidence(
-                            command.receiverName(),
-                            command.photoUrl(),
-                            command.signatureCode(),
-                            command.takenAt()
-                    );
-                    boolean ok = existing.validateDelivery(evidence);
-                    if (!ok) return Optional.empty();
-                    return Optional.of(orderRepository.save(existing));
-                });
+    public void handle(MarkAsReadyForDispatchOrderCommand command) {
+        orderRepository.findById(command.orderId()).map(order -> {
+            order.markAsReadyForDispatch();
+            orderRepository.save(order);
+            return order.getId();
+        }).orElseThrow(() -> new OrderNotFoundException(command.orderId()));
     }
 
-//    @Override
-//    public Optional<Order> handle(AssignVehicleToOrderCommand command) {
-//        var orderOpt = orderRepository.findById(command.orderId());
-//        if (orderOpt.isEmpty()) return Optional.empty();
-//
-//
-//        boolean fleetExists = externalFleetService.existsFleetByIdAndCapacity(command.fleetId(),orderOpt.get().getTotalWeight().getWeightKg());
-//
-//        if (!fleetExists) {
-//            throw new FleetNotFoundException(command.fleetId());
-//        }
-//
-//        Order order = orderOpt.get();
-//        // 1) Asociar la identidad del vehículo al pedido
-//        boolean ok = order.assignVehicle(new FleetId(command.fleetId()));
-//        if (!ok) return Optional.empty();
-//
-//        orderRepository.save(order);
-//
-//        return Optional.of(order);
-//    }
+    @Override
+    public void handle(MarkAsCompletedOrderCommand command) {
+        orderRepository.findById(command.orderId()).map(order -> {
+            var evidence = evidenceRepository.findById(command.evidenceId());
+            if(evidence.isEmpty()) throw new EvidenceNotFoundException(command.evidenceId());
+            order.markAsCompletedDelivery(evidence.get(), command.routeId());
+            orderRepository.save(order);
+            return order.getId();
+        }).orElseThrow(() -> new OrderNotFoundException(command.orderId()));
+    }
+
 }
