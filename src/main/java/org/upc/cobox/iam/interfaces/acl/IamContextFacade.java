@@ -26,14 +26,6 @@ public class IamContextFacade {
         this.userQueryService = userQueryService;
     }
 
-    public Long createUser(String email, String password, String firstName, String lastName, String phone) {
-        var defaultRole = Role.toRoleFromName("ROLE_DRIVER");
-        var signUpCommand = new SignUpCommand(email, password, firstName, lastName, phone,List.of(defaultRole));
-        var result = userCommandService.handle(signUpCommand);
-        if (result.isEmpty()) return 0L;
-        return result.get().getId();
-    }
-
     public Long createUser(String email, String password, String firstName, String lastName, String phone, List<String> roleNames) {
         if (roleNames == null) roleNames = new ArrayList<>();
         var roles = roleNames.stream()

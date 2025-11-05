@@ -36,7 +36,11 @@ public class Role extends AuditableModel {
 
 
     public static Role toRoleFromName(String name) {
-        return new Role(Roles.valueOf(name));
+        try {
+            return new Role(Roles.valueOf(name));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("The role '" + name + "' was not found in the system.");
+        }
     }
 
     public static List<Role> validateRoleSet(List<Role> roles) {

@@ -1,20 +1,12 @@
 package org.upc.cobox.delivery.domain.model.aggregates;
 
-
-
-import org.upc.cobox.Incident.domain.model.aggregates.Evidence;
+import org.upc.cobox.delivery.domain.exceptions.InvalidOrderStatusTransitionException;
 import org.upc.cobox.delivery.domain.model.commands.CreateOrderCommand;
-import org.upc.cobox.delivery.domain.model.commands.UpdateOrderStatusCommand;
-import org.upc.cobox.delivery.domain.model.events.OrderDeliveredEvent;
+import org.upc.cobox.delivery.domain.model.events.OrderCompletedEvent;
 import org.upc.cobox.delivery.domain.model.valueobjects.*;
 import jakarta.persistence.*;
 import lombok.Getter;
-import org.upc.cobox.fleet.domain.model.aggregates.Fleet;
 import org.upc.cobox.shared.domain.model.aggregates.AuditableAbstractAggregateRoot;
-
-
-import java.util.Date;
-import java.util.Objects;
 
 @Entity
 @Getter
@@ -28,95 +20,58 @@ public class Order extends AuditableAbstractAggregateRoot<Order> {
     private Address address;
 
     @Embedded
-    private Reference reference;
+    private  Reference reference;
+
+    private OrderStatus orderStatus;
+
+    private String description;
 
     @Embedded
-    private ScheduledAt scheduledAt;
+    @Getter
+    private WeightKg weightKg;
 
     @Embedded
-    private DeliveredAt deliveredAt;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 32)
-    private DeliveryStatus status;
-
-    @Embedded
-    private Notes notes;
-
-    @Embedded
-    private WeightKg totalWeight;
-
-    // Evidencia (cuando se valida la entrega)
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "evidence_id")
+    @Getter
     private Evidence evidence;
 
-
-    @Embedded
-    @AttributeOverride(name = "value", column = @Column(name = "fleet_id"))
-    private FleetId fleetId;
-
-    protected Order() { /* for JPA */ }
+    protected Order() {}
 
     public Order(CreateOrderCommand command) {
         this.clientId    = new ClientId(command.clientId());
         this.address     = new Address(command.addressLine(), command.city(), command.country(), command.postalCode());
-        this.reference   = new Reference(command.reference());
-        this.scheduledAt = new ScheduledAt(command.scheduledAt());
-        this.status      = DeliveryStatus.SCHEDULED;
-        this.notes       = new Notes(command.notes());
-        this.totalWeight = new WeightKg(command.totalWeight());
+        this.reference   = new Reference(command.referenceLatitude(), command.referenceLongitude());
+        this.description       = command.description();
+        this.weightKg = new WeightKg(command.weightKg());
+        this.orderStatus =OrderStatus.RECEIVED;
     }
 
-    // === Reglas de dominio ===
-
-    /**
-     * actualizarEstado(String) : bool
-     */
-    public boolean updateStatus(UpdateOrderStatusCommand command) {
-        Objects.requireNonNull(command);
-        DeliveryStatus newStatus = command.newStatus();
-
-        if (this.status == DeliveryStatus.CANCELLED || this.status == DeliveryStatus.DELIVERED) {
-            // Estados terminales; no permitir cambios.
-            return false;
+    public void markAsReadyForDispatch() {
+        if (this.orderStatus != OrderStatus.RECEIVED) {
+            throw new InvalidOrderStatusTransitionException(OrderStatus.RECEIVED,this.orderStatus);
         }
-        // No permitir saltos inválidos (simple ejemplo)
-        if (!this.status.canTransitionTo(newStatus)) return false;
-
-        this.status = newStatus;
-        return true;
+        this.orderStatus = OrderStatus.READY_FOR_DISPATCH;
     }
 
-    /**
-     * validarEntrega(Evidencia) : bool
-     * - Adjunta evidencia, fija deliveredAt, cambia estado y emite evento de dominio
-     */
-    public boolean validateDelivery(Evidence evidence) {
-        if (this.status == DeliveryStatus.DELIVERED) return false;
-        if (evidence == null || !evidence.isValid()) return false;
 
-        this.evidence = evidence;
-        this.deliveredAt = new DeliveredAt(new Date());
-        this.status = DeliveryStatus.DELIVERED;
-
-        // Domain event  notificaciones/actualizar proyecciones)
-        registerEvent(new OrderDeliveredEvent(this.getId(), this.clientId.getClientId(), this.deliveredAt.getDeliveredAt()));
-        return true;
+    public void markAsInTransit() {
+        if (this.orderStatus != OrderStatus.READY_FOR_DISPATCH) {
+            throw new InvalidOrderStatusTransitionException(OrderStatus.READY_FOR_DISPATCH,this.orderStatus);
+        }
+        this.orderStatus = OrderStatus.IN_TRANSIT;
     }
 
-    /** Asignar vehículo al pedido por identidad (AR externo). */
-    public boolean assignVehicle(FleetId fleetId) {
-        if (this.status == DeliveryStatus.CANCELLED || this.status == DeliveryStatus.DELIVERED) return false;
-        if (this.fleetId != null && this.fleetId.equals(fleetId)) return true; // ya asignado
-        this.fleetId = fleetId;
-        return true;
+    public void markAsCompletedDelivery(String photoUrl, String receiverName, String signatureData, Long routeId) {
+        if (this.orderStatus != OrderStatus.IN_TRANSIT) {
+            throw new InvalidOrderStatusTransitionException(OrderStatus.IN_TRANSIT,this.orderStatus);
+        }
+        this.orderStatus = OrderStatus.DELIVERED;
+        this.evidence = new Evidence(photoUrl, receiverName, signatureData);
+        this.registerEvent(new OrderCompletedEvent(this,this.getId(), routeId));
+
     }
 
-    public boolean unassignVehicle() {
-        if (this.status == DeliveryStatus.DELIVERED) return false;
-        this.fleetId = null;
-        return true;
+    public double getWeightValue() {
+        return this.weightKg.getWeightKg();
     }
 
 

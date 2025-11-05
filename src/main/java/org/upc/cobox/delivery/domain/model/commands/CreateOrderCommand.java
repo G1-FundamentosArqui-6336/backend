@@ -8,8 +8,8 @@ public record CreateOrderCommand (Long clientId,
                                   String city,
                                   String country,
                                   String postalCode,
-                                  String reference,
-                                  Date scheduledAt,
-                                  String notes,
-                                  BigDecimal totalWeight){
+                                  Double referenceLatitude,
+                                  Double referenceLongitude,
+                                  String description,
+                                  Double weightKg){
 }
